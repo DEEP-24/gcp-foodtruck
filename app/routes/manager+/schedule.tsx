@@ -1,8 +1,8 @@
+import { createId } from "@paralleldrive/cuid2";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import ObjectID from "bson-objectid";
 import * as React from "react";
 import { z } from "zod";
 import { TailwindContainer } from "~/components/TailwindContainer";
@@ -97,7 +97,7 @@ export default function ManageFoodTrucks() {
 
     const updatedSchedule: (typeof schedules)[0] = {
       ...(scheduleForDay || {
-        id: new ObjectID().toString(),
+        id: createId().toString(),
         foodTruckId: selectedFoodTruck?.id || "",
         day,
         startTime: "",

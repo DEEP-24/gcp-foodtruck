@@ -1,7 +1,7 @@
+import { createId } from "@paralleldrive/cuid2";
 import type { ActionFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useFetcher, useLoaderData } from "@remix-run/react";
-import ObjectID from "bson-objectid";
 import clsx from "clsx";
 import * as React from "react";
 import slugify from "slugify";
@@ -81,7 +81,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   const { itemId, ...rest } = fields;
-  const id = new ObjectID();
+  const id = createId();
 
   await db.item.upsert({
     where: {

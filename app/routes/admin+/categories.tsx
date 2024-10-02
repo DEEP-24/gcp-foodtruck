@@ -1,3 +1,4 @@
+import { createId } from "@paralleldrive/cuid2";
 import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -52,7 +53,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   const { categoryId, ...rest } = fields;
-  const id = new ObjectID();
+  const id = createId();
 
   await db.category.upsert({
     where: {
