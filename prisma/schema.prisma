@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  firstName        String     @map("first_name")
+  lastName         String     @map("last_name")
+  passwordHash     String     @map("password_hash")
+  email            String     @unique
+  orders           Order[]
+  phoneNo          String?    @map("phone_no")
+  address          String?
+  role             Role       @default(CUSTOMER)
+  ssn              String?    @map("ssn")
+  dob              DateTime?  @map("dob")
+  categories       Category[]
+  hasResetPassword Boolean    @default(false) @map("has_reset_password")
+
+  foodTruck   FoodTruck? @relation(fields: [foodTruckId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  foodTruckId String?    @map("food_truck_id") @db.ObjectId
+  Wallet      Wallet?
+
+  @@map("user")
+}
+
+model Wallet {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  balance Float  @default(0)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique @db.ObjectId
+
+  transactions Transaction[]
+
+  @@map("wallet")
+}
+
+model Transaction {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  type      TransactionType
+  createdAt DateTime        @default(now())
+
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  walletId String @db.ObjectId
+
+  @@map("transaction")
+}
+
+model Admin {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  firstName    String @map("first_name")
+  lastName     String @map("last_name")
+  email        String @unique
+  passwordHash String @map("password_hash")
+
+  @@map("admin")
+}
+
+model Manager {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  firstName    String @map("first_name")
+  lastName     String @map("last_name")
+  email        String @unique
+  passwordHash String @map("password_hash")
+  phoneNo      String @map("phone_no")
+
+  foodTruck   FoodTruck? @relation(fields: [foodTruckId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  foodTruckId String?    @unique @map("food_truck_id") @db.ObjectId
+
+  @@map("managers")
+}
+
+model FoodTruck {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  name        String              @unique
+  description String?
+  image       String
+  slug        String              @unique
+  items       Item[]
+  schedule    FoodTruckSchedule[]
+  phoneNo     String?
+  location    String?
+
+  staff   User[]
+  Manager Manager?
+
+  @@map("food_truck")
+}
+
+model FoodTruckSchedule {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  day       String
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+
+  foodTruck   FoodTruck @relation(fields: [foodTruckId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  foodTruckId String    @map("food_truck_id") @db.ObjectId
+
+  @@map("food_truck_schedule")
+}
+
+model Category {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String  @unique
+  description String?
+  imageUrl    String
+
+  categoryItems CategoryItem[]
+
+  admin   User?   @relation(fields: [adminId], references: [id])
+  adminId String? @db.ObjectId
+
+  @@map("category")
+}
+
+model CategoryItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  itemId     String   @map("item_id") @db.ObjectId
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  categoryId String   @map("category_id") @db.ObjectId
+
+  @@map("category_item")
+}
+
+model Item {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  image       String
+  slug        String      @unique
+  price       Float
+  quantity    Int
+  orderIds    ItemOrder[]
+
+  categories CategoryItem[]
+
+  restaurant   FoodTruck @relation(fields: [restaurantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  restaurantId String    @map("restaurant_id") @db.ObjectId
+
+  @@map("item")
+}
+
+model Order {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt      DateTime    @default(now()) @map("created_at")
+  type           OrderType   @default(PICKUP)
+  items          ItemOrder[]
+  invoice        Invoice?
+  status         OrderStatus
+  feedback       String?
+  pickupDateTime DateTime?   @map("pickup_date_time")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String @map("user_id") @db.ObjectId
+
+  @@map("order")
+}
+
+model Invoice {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt     DateTime      @default(now()) @map("created_at")
+  amount        Float
+  paymentMethod PaymentMethod @default(CREDIT_CARD) @map("payment_method")
+  totalAmount   Float         @map("total_amount")
+  address       String?
+
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String @unique @map("order_id") @db.ObjectId
+
+  @@map("invoice")
+}
+
+model ItemOrder {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  quantity Int
+
+  item    Item   @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  itemId  String @map("item_id") @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String @map("order_id") @db.ObjectId
+
+  @@unique([itemId, orderId])
+  @@map("item_order")
+}
+
+enum OrderStatus {
+  READY
+  PENDING
+  PREPARING
+  REJECTED
+  READYFORPICKUP
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderType {
+  PICKUP
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  WALLET
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER
+  ADMIN
+}
