@@ -9,10 +9,23 @@ import { requireUser } from "~/lib/session.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireUser(request);
 
-  invariant(user?.foodTruckId, "User must be associated with a food truck");
+  const staff = await db.staff.findUnique({
+    where: { userId: user.id },
+    include: { foodTruck: true },
+  });
+
+  invariant(staff?.foodTruckId, "Staff must be associated with a food truck");
+  
   const items = await db.item.findMany({
     where: {
-      restaurantId: user?.foodTruckId,
+      restaurantId: staff.foodTruckId,
+    },
+    include: {
+      categories: {
+        include: {
+          category: true,
+        },
+      },
     },
   });
 
@@ -43,14 +56,18 @@ export default function ManageFoodItems() {
                       >
                         Name
                       </th>
-
+                      <th
+                        scope="col"
+                        className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 md:pl-0"
+                      >
+                        Categories
+                      </th>
                       <th
                         scope="col"
                         className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 md:pl-0"
                       >
                         Price
                       </th>
-
                       <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 md:pr-0" />
                     </tr>
                   </thead>
@@ -66,6 +83,9 @@ export default function ManageFoodItems() {
                             />
                             <p>{item.name}</p>
                           </div>
+                        </td>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
+                          {item.categories.map((c) => c.category.name).join(", ")}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
                           ${item.price.toFixed(2)}

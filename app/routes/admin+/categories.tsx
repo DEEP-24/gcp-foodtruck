@@ -72,7 +72,9 @@ export const action: ActionFunction = async ({ request }) => {
 export default function ManageFoodItems() {
   const fetcher = useFetcherCallback<ActionData>({
     onSuccess: () => {
+      console.log("Success");
       setSelectedCategoryId(null);
+      setSelectedCategory(null);
       setModalOpen(false);
     },
   });
@@ -85,7 +87,6 @@ export default function ManageFoodItems() {
   const [selectedCategory, setSelectedCategory] = React.useState<_Category | null>(null);
   const [mode, setMode] = React.useState<MODE>(MODE.edit);
   const [modalOpen, setModalOpen] = React.useState(false);
-  // const [isModalOpen, handleModal] = useDisclosure(false);
 
   const isSubmitting = fetcher.state !== "idle";
 
@@ -102,8 +103,6 @@ export default function ManageFoodItems() {
 
     setSelectedCategory(category);
     setModalOpen(true);
-    // handleModal is not meemoized, so we don't need to add it to the dependency array
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, selectedCategoryId]);
 
   return (

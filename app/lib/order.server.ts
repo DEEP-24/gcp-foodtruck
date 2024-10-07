@@ -1,12 +1,13 @@
-import { type Invoice, type Order, type OrderType, PaymentMethod, type User } from "@prisma/client";
-import { OrderStatus } from "@prisma/client";
+import { type Invoice, type Order, type OrderType, PaymentMethod, type User, OrderStatus, Customer } from "@prisma/client";
 import type { CartItem } from "~/context/CartContext";
 import { db } from "~/lib/db.server";
 
 export function getOrders(userId: User["id"]) {
   return db.order.findMany({
     where: {
-      userId,
+      customer: {
+        userId: userId,
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -28,14 +29,14 @@ export function getOrders(userId: User["id"]) {
 }
 
 export function createOrder({
-  userId,
+  customerId,
   items,
   amount,
   orderType,
   paymentMethod,
   pickupDateTime,
 }: {
-  userId: User["id"];
+  customerId: Customer["id"];
   items: Array<CartItem>;
   amount: Invoice["amount"];
   paymentMethod: PaymentMethod;
@@ -43,10 +44,25 @@ export function createOrder({
   pickupDateTime: Order["pickupDateTime"];
 }) {
   return db.$transaction(async (tx) => {
+    // Check if customerId is defined
+    if (!customerId) {
+      throw new Error("Customer ID is required");
+    }
+
+    // Find the customer associated with the user
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      throw new Error(`Customer not found with ID: ${customerId}`);
+    }
+
     // If payment method is wallet, check balance and deduct amount
     if (paymentMethod === PaymentMethod.WALLET) {
-      const wallet = await tx.wallet.findUnique({
-        where: { userId },
+      const wallet = await tx.wallet.findFirst({
+        where: { Customer: { some: { id: customer.id } } },
         select: { id: true, balance: true },
       });
 
@@ -77,17 +93,17 @@ export function createOrder({
     // Create the order
     const order = await tx.order.create({
       data: {
-        userId,
+        customer: {
+          connect: { id: customer.id },
+        },
         type: orderType,
         status: OrderStatus.PENDING,
         pickupDateTime,
         items: {
-          createMany: {
-            data: items.map((item) => ({
-              itemId: item.id,
-              quantity: item.quantity,
-            })),
-          },
+          create: items.map((item) => ({
+            quantity: item.quantity,
+            item: { connect: { id: item.id } },
+          })),
         },
         invoice: {
           create: {

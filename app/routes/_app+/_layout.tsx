@@ -44,7 +44,15 @@ export default function AppLayout() {
   return (
     <>
       <div className="flex h-full flex-col">
-        <Navbar navItems={navItems} currentUser={user} />
+        <Navbar
+          navItems={navItems}
+          currentUser={user ? {
+            ...user,
+            firstName: user.profile?.firstName ?? '',
+            lastName: user.profile?.lastName ?? '',
+            foodTruckId: user.customer?.id ?? null
+          } : null}
+        />
         <Outlet />
         <FooterComponent />
       </div>

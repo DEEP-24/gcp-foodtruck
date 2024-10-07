@@ -15,35 +15,63 @@ async function seed() {
   await db.itemOrder.deleteMany();
   await db.invoice.deleteMany();
 
-  const user = await db.user.upsert({
-    where: {
-      email: "user@app.com",
-    },
-    update: {},
-    create: {
-      firstName: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      email: "user@app.com",
-      phoneNo: "123-456-7890",
-      address: faker.address.streetAddress(),
-      passwordHash: await createPasswordHash("password"),
-    },
-  });
-
-  await db.user.create({
+  // Create a customer
+  const customerProfile = await db.profile.create({
     data: {
       firstName: faker.name.firstName(),
       lastName: faker.name.lastName(),
+      phoneNo: "123-456-7890",
+      address: faker.address.streetAddress(),
+    },
+  });
+
+  const customerUser = await db.user.create({
+    data: {
+      email: "user@app.com",
+      passwordHash: await createPasswordHash("password"),
+      role: Role.CUSTOMER,
+      profileId: customerProfile.id,
+    },
+  });
+
+  await db.customer.create({
+    data: {
+      userId: customerUser.id,
+    },
+  });
+
+  // Create an admin
+  const adminProfile = await db.profile.create({
+    data: {
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName(),
+    },
+  });
+
+  const adminUser = await db.user.create({
+    data: {
       email: "admin@app.com",
       passwordHash: await createPasswordHash("password"),
       role: Role.ADMIN,
+      profileId: adminProfile.id,
     },
   });
 
+  await db.admin.create({
+    data: {
+      userId: adminUser.id,
+    },
+  });
+
+  // Create a wallet for the customer
   await db.wallet.create({
     data: {
       balance: 1000,
-      userId: user.id,
+      Customer: {
+        connect: {
+          userId: customerUser.id,
+        },
+      },
     },
   });
 
@@ -156,6 +184,23 @@ async function seed() {
           },
         ],
       },
+      manager: {
+        create: {
+          user: {
+            create: {
+              email: "manager@app.com",
+              passwordHash: await createPasswordHash("password"),
+              role: Role.MANAGER,
+              profile: {
+                create: {
+                  firstName: "FT1 Manager",
+                  lastName: "FT1 Manager",
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -228,28 +273,23 @@ async function seed() {
           },
         ],
       },
-    },
-  });
-
-  await db.user.create({
-    data: {
-      email: "manager@app.com",
-      firstName: "FT1 Staff",
-      lastName: "FT1 Staff",
-      passwordHash: await createPasswordHash("password"),
-      role: "MANAGER",
-      foodTruckId: ft1.id,
-    },
-  });
-
-  await db.user.create({
-    data: {
-      email: "manager02@app.com",
-      firstName: "FT2 Staff",
-      lastName: "FT2 Staff",
-      passwordHash: await createPasswordHash("password"),
-      role: "MANAGER",
-      foodTruckId: ft2.id,
+      manager: {
+        create: {
+          user: {
+            create: {
+              email: "manager02@app.com",
+              passwordHash: await createPasswordHash("password"),
+              role: Role.MANAGER,
+              profile: {
+                create: {
+                  firstName: "FT2 Manager",
+                  lastName: "FT2 Manager",
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -308,8 +348,6 @@ async function seed() {
       },
     ],
   });
-
-  // }
 
   console.log("Database has been seeded. 🌱");
 }

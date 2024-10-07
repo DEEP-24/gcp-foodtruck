@@ -31,17 +31,18 @@ import { useFetcherCallback } from "~/utils/use-fetcher-callback";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const userId = await requireUserId(request);
 
-  const wallet = await db.wallet.findUnique({
-    where: {
-      userId,
-    },
-    select: {
-      balance: true,
-      transactions: true,
+  const customer = await db.customer.findUnique({
+    where: { userId },
+    include: {
+      Wallet: {
+        include: {
+          transactions: true,
+        },
+      },
     },
   });
 
-  return json({ wallet });
+  return json({ customer });
 };
 
 type ActionData = Partial<{
@@ -56,10 +57,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const amount = formData.get("amount");
 
+  const customer = await db.customer.findUnique({
+    where: { userId },
+    select: { id: true, walletId: true },
+  });
+
+  if (!customer || !customer.walletId) {
+    throw new Error("Customer or wallet not found");
+  }
+
   // Save the transaction
   await db.wallet.update({
     where: {
-      userId,
+      id: customer.walletId,
     },
     data: {
       balance: {
@@ -78,7 +88,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Wallet() {
-  const { wallet } = useLoaderData<typeof loader>();
+  const { customer } = useLoaderData<typeof loader>();
+  const wallet = customer?.Wallet;
 
   const fetcher = useFetcherCallback<ActionData>({
     onSuccess: () => {
@@ -211,7 +222,7 @@ export default function Wallet() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold">
-              <span>${wallet?.balance.toFixed(2)}</span>
+              <span>${wallet?.balance.toFixed(2) ?? "0.00"}</span>
             </div>
           </CardContent>
         </Card>

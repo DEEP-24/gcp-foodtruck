@@ -30,14 +30,20 @@ import { validateAction } from "~/utils/validation";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireUser(request);
 
-  invariant(user?.foodTruckId, "User must be associated with a food truck");
+  const manager = await db.manager.findUnique({
+    where: { userId: user.id },
+    include: { foodTruck: true },
+  });
+
+  invariant(manager?.foodTruckId, "Manager must be associated with a food truck");
+
   const items = await db.item.findMany({
     where: {
-      restaurantId: user?.foodTruckId,
+      restaurantId: manager.foodTruckId,
     },
     include: {
       categories: {
-        select: {
+        include: {
           category: true,
         },
       },
@@ -72,7 +78,13 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const staff = await requireUser(request);
+  const user = await requireUser(request);
+  const manager = await db.manager.findUnique({
+    where: { userId: user.id },
+    include: { foodTruck: true },
+  });
+
+  invariant(manager?.foodTruckId, "Manager must be associated with a food truck");
 
   const { fields, fieldErrors } = await validateAction(request, ManageFoodItemSchema);
 
@@ -85,33 +97,35 @@ export const action: ActionFunction = async ({ request }) => {
 
   await db.item.upsert({
     where: {
-      id: itemId || id.toString(),
+      id: itemId || id,
     },
     update: {
       ...rest,
       categories: {
         deleteMany: {},
-        createMany: {
-          data: rest.categories.map((categoryId) => ({
-            categoryId,
-          })),
-        },
+        create: rest.categories.map((categoryId) => ({
+          category: {
+            connect: { id: categoryId },
+          },
+        })),
       },
     },
     create: {
       ...rest,
+      id: id,
       quantity: 1,
-      restaurantId: staff.foodTruckId!,
+      restaurantId: manager.foodTruckId,
       slug: `${slugify(rest.name)}-${Math.random().toString(36).slice(2)}`,
       categories: {
-        createMany: {
-          data: rest.categories.map((categoryId) => ({
-            categoryId,
-          })),
-        },
+        create: rest.categories.map((categoryId) => ({
+          category: {
+            connect: { id: categoryId },
+          },
+        })),
       },
     },
   });
+
   return json({ success: true });
 };
 
@@ -292,7 +306,6 @@ export default function ManageFoodItems() {
           </DialogHeader>
           <fetcher.Form method="post">
             <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
-              <input type="hidden" name="restaurantId" value={selectedItem?.restaurantId} />
               <input type="hidden" name="itemId" value={selectedItem?.id} />
 
               <div className="grid w-full max-w-sm items-center gap-1.5">

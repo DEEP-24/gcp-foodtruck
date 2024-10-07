@@ -38,12 +38,12 @@ import { badRequest } from "~/utils/misc.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const userId = await requireUserId(request, request.url);
 
-  const wallet = await db.wallet.findUnique({
-    where: { userId },
-    select: { balance: true },
+  const customer = await db.customer.findUnique({
+    where: { userId: userId },
+    include: { Wallet: true },
   });
 
-  return json({ wallet });
+  return json({ customer });
 };
 
 type ActionData = Partial<{
@@ -87,7 +87,7 @@ export async function action({ request }: ActionFunctionArgs) {
       const products = JSON.parse(stringifiedProducts) as Array<CartItem>;
 
       await createOrder({
-        userId,
+        customerId: userId,
         items: products,
         amount: Number(amount),
         paymentMethod: paymentMethod as PaymentMethod,
@@ -104,7 +104,7 @@ export default function Cart() {
   const id = React.useId();
   const { foodTrucks } = useAppData();
   const fetcher = useFetcher<ActionData>();
-  const { wallet } = useLoaderData<typeof loader>();
+  const { customer } = useLoaderData<typeof loader>();
 
   const { clearCart, itemsInCart, totalPrice } = useCart();
 
@@ -148,7 +148,7 @@ export default function Cart() {
     }
 
     if (paymentMethod === PaymentMethod.WALLET) {
-      if ((wallet?.balance ?? 0) < totalPrice) {
+      if ((customer?.Wallet?.balance ?? 0) < totalPrice) {
         newErrors.wallet = "Insufficient wallet balance";
       }
     } else if (paymentMethod === PaymentMethod.CASH) {
@@ -413,7 +413,7 @@ export default function Cart() {
 
               {paymentMethod === PaymentMethod.WALLET && (
                 <div className="text-sm">
-                  <p>Wallet Balance: ${wallet?.balance.toFixed(2)}</p>
+                  <p>Wallet Balance: ${customer?.Wallet?.balance.toFixed(2) ?? "0.00"}</p>
                   {errors.wallet && <p className="text-red-500">{errors.wallet}</p>}
                 </div>
               )}

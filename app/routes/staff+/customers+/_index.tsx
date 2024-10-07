@@ -22,13 +22,17 @@ import { createCustomer, getUserByEmail } from "~/lib/user.server";
 import { badRequest, validateEmail, validateName } from "~/utils/misc.server";
 
 export const loader = async () => {
-  const users = await db.user.findMany({
-    where: {
-      role: Role.CUSTOMER,
+  const customers = await db.customer.findMany({
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
     },
   });
 
-  return json({ users });
+  return json({ customers });
 };
 
 interface ActionData {
@@ -123,26 +127,26 @@ export const action: ActionFunction = async ({ request }) => {
   });
 
   return json({
-    message: "User created successfully",
+    message: "Customer created successfully",
     success: true,
   });
 };
 
-export default function ManageEmployees() {
-  const { users } = useLoaderData<typeof loader>();
+export default function ManageCustomers() {
+  const { customers } = useLoaderData<typeof loader>();
 
   const [search, setSearch] = React.useState("");
 
-  const filteredUsers = React.useMemo(() => {
+  const filteredCustomers = React.useMemo(() => {
     if (!search) {
-      return users;
+      return customers;
     }
 
-    return users.filter((user) => {
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+    return customers.filter((customer) => {
+      const fullName = `${customer.user.profile?.firstName} ${customer.user.profile?.lastName}`.toLowerCase();
       return fullName.includes(search.toLowerCase());
     });
-  }, [search, users]);
+  }, [search, customers]);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
@@ -233,23 +237,23 @@ export default function ManageEmployees() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id}>
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id}>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {user.firstName} {user.lastName}
+                          {customer.user.profile?.firstName} {customer.user.profile?.lastName}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {user.email}
+                          {customer.user.email}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {user.phoneNo}
+                          {customer.user.profile?.phoneNo}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {user.address}
+                          {customer.user.profile?.address}
                         </td>
                         <td className="relative space-x-4 whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6 md:pr-0">
                           <Button size="sm" color="blue" asChild>
-                            <Link to={user.id}>Start order</Link>
+                            <Link to={customer.id}>Start order</Link>
                           </Button>
                         </td>
                       </tr>

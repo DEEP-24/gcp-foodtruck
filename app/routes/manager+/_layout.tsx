@@ -111,7 +111,7 @@ function HeaderComponent() {
               <>
                 <div className="flex items-center gap-4">
                   <span>
-                    Welcome, {user.firstName} {user.lastName}
+                    Welcome, {user.profile?.firstName} {user.profile?.lastName}
                   </span>
                 </div>
               </>

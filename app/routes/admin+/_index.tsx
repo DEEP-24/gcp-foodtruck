@@ -43,6 +43,15 @@ export const loader = async () => {
   const foodTrucks = await db.foodTruck.findMany({
     include: {
       schedule: true,
+      manager: {
+        include: {
+          user: {
+            include: {
+              profile: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -61,36 +70,41 @@ export const action: ActionFunction = async ({ request }) => {
     return badRequest<ActionData>({ success: false, fieldErrors });
   }
 
-  await db.foodTruck.create({
-    data: {
-      name: fields.name,
-      image: fields.image,
-      slug: slugify(fields.name, { lower: true, strict: true }),
-      description: fields.description,
-      phoneNo: fields.foodTruckPhoneNo,
-      location: fields.location,
-      staff: {
-        create: {
-          email: fields.email,
-          passwordHash: await createPasswordHash(fields.password),
-          role: "MANAGER",
-          firstName: fields.name,
-          lastName: "Owner",
-          phoneNo: fields.managerPhoneNo,
+  await db.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: fields.email,
+        passwordHash: await createPasswordHash(fields.password),
+        role: "MANAGER",
+        profile: {
+          create: {
+            firstName: fields.name,
+            lastName: "Owner",
+            phoneNo: fields.managerPhoneNo,
+          },
         },
       },
-    },
+    });
+
+    const foodTruck = await tx.foodTruck.create({
+      data: {
+        name: fields.name,
+        image: fields.image,
+        slug: slugify(fields.name, { lower: true, strict: true }),
+        description: fields.description,
+        phoneNo: fields.foodTruckPhoneNo,
+        location: fields.location,
+      },
+    });
+
+    await tx.manager.create({
+      data: {
+        userId: user.id,
+        foodTruckId: foodTruck.id,
+      },
+    });
   });
 
-  await db.manager.create({
-    data: {
-      email: fields.email,
-      passwordHash: await createPasswordHash(fields.password),
-      firstName: fields.name,
-      lastName: "Owner",
-      phoneNo: fields.managerPhoneNo,
-    },
-  });
   return json({ success: true });
 };
 
@@ -234,23 +248,6 @@ export default function ManageFoodTrucks() {
                       <p className="mt-5 text-xl  text-orange-500">{foodTruck.name}</p>
                     </div>
                     <div className="whitespace-nowrap border-t border-gray-900/5 py-4 pl-4 pr-3 pt-2 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                      {/* {foodTruck.schedule.length > 0 ? (
-                        <div className="flex h-40 flex-col gap-1">
-                          {foodTruck.schedule.map((s) => (
-                            <div key={s.id} className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-900">{s.day}: </span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {formatTime(s.startTime)} - {formatTime(s.endTime)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="flex h-40 items-center text-lg font-medium text-gray-900">
-                          No schedule
-                        </span>
-                      )} */}
-
                       {foodTruck?.schedule.length > 0 ? (
                         <div className="flex h-40 flex-col gap-1">
                           {daysOfWeek.map((day) => {

@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+import type { User, Profile, Customer } from "@prisma/client";
 import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { db } from "~/lib/db.server";
@@ -9,12 +9,20 @@ export async function getUserById(id: User["id"]) {
     where: { id },
     select: {
       id: true,
-      firstName: true,
-      lastName: true,
       email: true,
-      foodTruckId: true,
       hasResetPassword: true,
       role: true,
+      profile: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+      customer: {
+        select: {
+          id: true,
+        },
+      },
     },
   });
 }
@@ -23,9 +31,13 @@ export async function getUserByEmail(email: User["email"]) {
   return db.user.findUnique({
     where: { email },
     select: {
-      firstName: true,
-      lastName: true,
       email: true,
+      profile: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
     },
   });
 }
@@ -39,27 +51,43 @@ export async function createUser({
 }: {
   email: User["email"];
   password: string;
-  firstName: User["firstName"];
-  lastName: User["lastName"];
+  firstName: Profile["firstName"];
+  lastName: Profile["lastName"];
   role?: User["role"];
 }) {
   return db.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
-        firstName,
-        lastName,
         email,
         passwordHash: await createPasswordHash(password),
         role,
+        profile: {
+          create: {
+            firstName,
+            lastName,
+          },
+        },
       },
     });
 
-    await tx.wallet.create({
-      data: {
-        userId: user.id,
-        balance: 0,
-      },
-    });
+    if (role === Role.CUSTOMER) {
+      const customer = await tx.customer.create({
+        data: {
+          userId: user.id,
+        },
+      });
+
+      await tx.wallet.create({
+        data: {
+          balance: 0,
+          Customer: {
+            connect: {
+              id: customer.id,
+            },
+          },
+        },
+      });
+    }
 
     return user;
   });
@@ -75,29 +103,42 @@ export async function createCustomer({
 }: {
   email: User["email"];
   password: string;
-  firstName: User["firstName"];
-  lastName: User["lastName"];
-  phoneNo: User["phoneNo"];
-  address: User["address"];
-  role?: User["role"];
+  firstName: Profile["firstName"];
+  lastName: Profile["lastName"];
+  phoneNo: Profile["phoneNo"];
+  address: Profile["address"];
 }) {
   return db.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
-        firstName,
-        lastName,
         email,
-        phoneNo,
-        address,
         passwordHash: await createPasswordHash(password),
         role: Role.CUSTOMER,
+        profile: {
+          create: {
+            firstName,
+            lastName,
+            phoneNo,
+            address,
+          },
+        },
+      },
+    });
+
+    const customer = await tx.customer.create({
+      data: {
+        userId: user.id,
       },
     });
 
     await tx.wallet.create({
       data: {
-        userId: user.id,
         balance: 0,
+        Customer: {
+          connect: {
+            id: customer.id,
+          },
+        },
       },
     });
 
@@ -108,6 +149,9 @@ export async function createCustomer({
 export async function verifyLogin(email: User["email"], password: string) {
   const userWithPassword = await db.user.findUnique({
     where: { email },
+    include: {
+      profile: true,
+    },
   });
 
   if (!userWithPassword || !userWithPassword.passwordHash) {

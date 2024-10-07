@@ -1,5 +1,5 @@
 import { CheckCircleIcon, MinusCircleIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
-import { OrderStatus, OrderType } from "@prisma/client";
+import { OrderStatus, OrderType, PaymentMethod } from "@prisma/client";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useNavigation, useSearchParams, useSubmit } from "@remix-run/react";
@@ -24,25 +24,44 @@ import { titleCase } from "~/utils/misc";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireUser(request);
 
+  const staff = await db.staff.findUnique({
+    where: { userId: user.id },
+    include: { foodTruck: true },
+  });
+
+  if (!staff?.foodTruckId) {
+    throw new Error("Staff must be associated with a food truck");
+  }
+
   const orders = await db.order.findMany({
     where: {
       items: {
         some: {
           item: {
-            restaurantId: user.foodTruckId!,
+            restaurantId: staff.foodTruckId,
           },
         },
       },
     },
-    orderBy: { createdAt: "desc" },
     include: {
-      invoice: true,
+      customer: {
+        include: {
+          user: {
+            include: {
+              profile: true,
+            },
+          },
+        },
+      },
       items: {
         include: {
           item: true,
         },
       },
-      user: true,
+      invoice: true,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 
@@ -170,27 +189,22 @@ export default function Orders() {
                             order.type === OrderType.PICKUP
                               ? ["PREPARING", "READYFORPICKUP", "COMPLETED"]
                               : ["PREPARING", "DELIVERED", "COMPLETED"];
-                          const isOrderCompleted = order.status === "COMPLETED";
-
+                          const isOrderCompleted = order.status === OrderStatus.COMPLETED;
                           const isOrderDelivered = order.status === OrderStatus.DELIVERED;
 
                           return (
                             <tr key={order.id}>
                               <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
                                 <div className="font-medium text-gray-900">
-                                  {order.user.firstName} {order.user.lastName}
+                                  {order.customer?.user.profile?.firstName} {order.customer?.user.profile?.lastName}
                                 </div>
-                                <div className="text-gray-500">{order.user.email}</div>
+                                <div className="text-gray-500">{order.customer?.user.email}</div>
                               </td>
 
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                 <div className="text-gray-900">{titleCase(order.type)}</div>
                                 <div className="text-gray-500">
-                                  (
-                                  {order.invoice?.paymentMethod
-                                    ? order.invoice?.paymentMethod.replace("_", " ")
-                                    : "-"}
-                                  )
+                                  ({order.invoice?.paymentMethod ? titleCase(order.invoice.paymentMethod) : "-"})
                                 </div>
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">

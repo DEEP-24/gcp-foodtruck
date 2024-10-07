@@ -27,10 +27,9 @@ import { validateAction } from "~/utils/validation";
 const AddEmployeeSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().min(1, "Email is required"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   foodTruckId: z.string().min(1, "Food truck is required"),
-  ssn: z.string().min(1, "SSN is required"),
   phoneNo: z.string().min(1, "Phone number is required"),
   DOB: z.string().min(1, "Date of birth is required"),
 });
@@ -38,14 +37,26 @@ const AddEmployeeSchema = z.object({
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireUser(request);
 
-  const employees = await db.user.findMany({
-    where: {
-      foodTruckId: user?.foodTruckId,
-      role: "STAFF",
+  const manager = await db.manager.findUnique({
+    where: { userId: user.id },
+    include: { 
+      foodTruck: { 
+        include: { 
+          staff: { 
+            include: { 
+              user: { 
+                include: { 
+                  profile: true 
+                } 
+              } 
+            } 
+          } 
+        } 
+      } 
     },
   });
 
-  return json({ employees });
+  return json({ employees: manager?.foodTruck?.staff ?? [] });
 };
 
 interface ActionData {
@@ -59,23 +70,31 @@ export const action: ActionFunction = async ({ request }) => {
     return badRequest<ActionData>({ success: false, fieldErrors });
   }
 
-  await db.user.create({
-    data: {
-      firstName: fields.firstName,
-      lastName: fields.lastName,
-      email: fields.email,
-      ssn: fields.ssn,
-      phoneNo: fields.phoneNo,
-      dob: new Date(fields.DOB),
-      role: "STAFF",
-      passwordHash: await createPasswordHash(fields.password),
-      foodTruck: {
-        connect: {
-          id: fields.foodTruckId,
+  await db.$transaction(async (tx) => {
+    const profile = await tx.profile.create({
+      data: {
+        firstName: fields.firstName,
+        lastName: fields.lastName,
+        phoneNo: fields.phoneNo,
+        dob: new Date(fields.DOB),
+      },
+    });
+
+    const user = await tx.user.create({
+      data: {
+        email: fields.email,
+        passwordHash: await createPasswordHash(fields.password),
+        role: "STAFF",
+        profileId: profile.id,
+        staff: {
+          create: {
+            foodTruckId: fields.foodTruckId,
+          },
         },
       },
-    },
+    });
   });
+
   return json({ success: true });
 };
 
@@ -136,12 +155,6 @@ export default function ManageEmployees() {
                         scope="col"
                         className="hidden py-3.5 px-3 text-left text-sm font-semibold text-gray-900 sm:table-cell"
                       >
-                        SSN
-                      </th>
-                      <th
-                        scope="col"
-                        className="hidden py-3.5 px-3 text-left text-sm font-semibold text-gray-900 sm:table-cell"
-                      >
                         Phone No
                       </th>
                       <th
@@ -155,21 +168,18 @@ export default function ManageEmployees() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {employees.map((employee) => (
-                      <tr key={employee.id}>
+                      <tr key={employee.user.id}>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {employee.firstName} {employee.lastName}
+                          {employee.user.profile?.firstName} {employee.user.profile?.lastName}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {employee.email}
+                          {employee.user.email}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {employee.ssn}
+                          {employee.user.profile?.phoneNo}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {employee.phoneNo}
-                        </td>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {formatDate(employee.dob as string)}
+                          {formatDate(employee.user.profile?.dob ?? '')}
                         </td>
 
                         <td className="relative space-x-4 whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6 md:pr-0" />
@@ -191,7 +201,7 @@ export default function ManageEmployees() {
               disabled={isSubmitting}
               className="flex flex-col gap-4 items-center justify-center"
             >
-              <input hidden name="foodTruckId" defaultValue={user?.foodTruckId ?? ""} />
+              <input hidden name="foodTruckId" defaultValue={(user as any)?.manager?.foodTruckId ?? ""} />
               <div className="grid w-full max-w-sm items-center gap-1.5">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input type="text" name="firstName" required />
@@ -221,14 +231,6 @@ export default function ManageEmployees() {
                 <Input type="password" name="password" required />
                 {fetcher.data?.fieldErrors?.password && (
                   <div className="text-red-600">{fetcher.data.fieldErrors.password}</div>
-                )}
-              </div>
-
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="ssn">SSN</Label>
-                <Input type="number" name="ssn" required />
-                {fetcher.data?.fieldErrors?.ssn && (
-                  <div className="text-red-600">{fetcher.data.fieldErrors.ssn}</div>
                 )}
               </div>
 

@@ -44,9 +44,16 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     return redirect("/staff/customers");
   }
 
-  const customer = await db.user.findFirst({
+  const customer = await db.customer.findUnique({
     where: {
-      id: custId,
+      userId: custId,
+    },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
     },
   });
 
@@ -54,11 +61,21 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     return redirect("/staff/customers");
   }
 
+  const staff = await db.staff.findUnique({
+    where: { userId: user.id },
+    include: { foodTruck: true },
+  });
+
+  if (!staff?.foodTruckId) {
+    throw new Error("Staff must be associated with a food truck");
+  }
+
   const items = await db.item.findMany({
     where: {
-      restaurantId: user?.foodTruckId as string,
+      restaurantId: staff.foodTruckId,
     },
   });
+
   const foodTrucks = await getAllRestaurants();
 
   return json({ customer, items, foodTrucks });
@@ -104,7 +121,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       const products = JSON.parse(stringifiedProducts) as Array<StaffCartItem>;
 
       await createOrder({
-        userId: custId,
+        customerId: custId,
         items: products,
         amount: Number(amount),
         paymentMethod: paymentMethod as PaymentMethod,
@@ -147,10 +164,10 @@ export default function CreateOrder() {
                 <h1 className="text-lg font-semibold text-gray-900">Customer</h1>
                 <div className="mt-1 text-sm text-gray-600">
                   <p>
-                    {customer.firstName} {customer.lastName}
+                    {customer.user.profile?.firstName} {customer.user.profile?.lastName}
                   </p>
-                  <p>{customer.email}</p>
-                  <p>{customer.phoneNo}</p>
+                  <p>{customer.user.email}</p>
+                  <p>{customer.user.profile?.phoneNo}</p>
                 </div>
               </div>
             </div>

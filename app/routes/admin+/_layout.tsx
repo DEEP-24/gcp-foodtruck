@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, SerializeFrom } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, NavLink, Outlet } from "@remix-run/react";
+import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import {
@@ -9,9 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { isCustomer, isManager, isStaff } from "~/lib/session.server";
+import { db } from "~/lib/db.server";
+import { isCustomer, isManager, isStaff, requireUser } from "~/lib/session.server";
 import { cn } from "~/utils/helpers";
-import { useOptionalUser } from "~/utils/hooks";
 
 export type AppLoaderData = SerializeFrom<typeof loader>;
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -25,7 +25,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return redirect("/staff");
   }
 
-  return json({});
+  const user = await requireUser(request);
+  const admin = await db.admin.findUnique({
+    where: { userId: user.id },
+    include: { user: { include: { profile: true } } },
+  });
+
+  if (!admin) {
+    throw new Error("Admin not found");
+  }
+
+  return json({ admin });
 };
 
 export default function AppLayout() {
@@ -44,7 +54,7 @@ export default function AppLayout() {
 }
 
 function HeaderComponent() {
-  const { user } = useOptionalUser();
+  const { admin } = useLoaderData<typeof loader>();
 
   const navItems = [
     { label: "FoodTrucks", href: "/admin" },
@@ -83,7 +93,26 @@ function HeaderComponent() {
         </div>
 
         <div className="flex items-center space-x-5">
-          {!user ? (
+          {admin ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="flex items-center justify-center">
+                <Avatar className="cursor-pointer bg-orange-500 text-white">
+                  {admin.user.profile?.firstName.charAt(0)}
+                  {admin.user.profile?.lastName.charAt(0)}
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <Form replace action="/api/auth/logout" method="post">
+                  <Button
+                    type="submit"
+                    className="w-full bg-orange-500 text-white hover:bg-orange-400"
+                  >
+                    Logout
+                  </Button>
+                </Form>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <div className="flex items-center space-x-3">
               <Link
                 to="/login"
@@ -98,25 +127,6 @@ function HeaderComponent() {
                 Sign Up
               </Link>
             </div>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild className="flex items-center justify-center">
-                <Avatar className="cursor-pointer bg-orange-500 text-white">
-                  {user.firstName.charAt(0)}
-                  {user.lastName.charAt(0)}
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <Form replace action="/api/auth/logout" method="post">
-                  <Button
-                    type="submit"
-                    className="w-full bg-orange-500 text-white hover:bg-orange-400"
-                  >
-                    Logout
-                  </Button>
-                </Form>
-              </DropdownMenuContent>
-            </DropdownMenu>
           )}
         </div>
       </div>
