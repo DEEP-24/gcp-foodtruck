@@ -121,9 +121,6 @@ export default function Orders() {
 
   const [items, setProducts] = React.useState<(typeof orders)[number]["items"]>([]);
   const [modalOpen, setModalOpen] = React.useState(false);
-  // const [isOpen, modalHandler] = useDisclosure(false, {
-  //   onClose: () => setProducts([]),
-  // });
 
   const isSubmitting = transition.state !== "idle";
   const [searchParams, setSearchParams] = useSearchParams();
@@ -199,14 +196,19 @@ export default function Orders() {
                             <tr key={order.id}>
                               <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
                                 <div className="font-medium text-gray-900">
-                                  {order.customer?.user.profile?.firstName} {order.customer?.user.profile?.lastName}
+                                  {order.customer?.user.profile?.firstName}{" "}
+                                  {order.customer?.user.profile?.lastName}
                                 </div>
                                 <div className="text-gray-500">{order.customer?.user.email}</div>
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                 <div className="text-gray-900">{titleCase(order.type)}</div>
                                 <div className="text-gray-500">
-                                  ({order.invoice?.paymentMethod ? titleCase(order.invoice.paymentMethod) : "-"})
+                                  (
+                                  {order.invoice?.paymentMethod
+                                    ? titleCase(order.invoice.paymentMethod)
+                                    : "-"}
+                                  )
                                 </div>
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -215,7 +217,7 @@ export default function Orders() {
                                     isPending
                                       ? "bg-gray-500 text-white hover:bg-gray-500"
                                       : isCancelled
-                                        ? "bg-indigo-500 text-white hover:bg-indigo-500"
+                                        ? "bg-red-500 text-white hover:bg-red-500"
                                         : isRejected
                                           ? "bg-red-500 text-white hover:bg-red-500"
                                           : "bg-green-500 text-white hover:bg-green-500"

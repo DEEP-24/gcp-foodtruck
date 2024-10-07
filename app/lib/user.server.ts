@@ -1,4 +1,4 @@
-import type { User, Profile, Customer } from "@prisma/client";
+import type { Profile, User } from "@prisma/client";
 import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { db } from "~/lib/db.server";
@@ -18,11 +18,10 @@ export async function getUserById(id: User["id"]) {
           lastName: true,
         },
       },
-      customer: {
-        select: {
-          id: true,
-        },
-      },
+      manager: true,
+      customer: true,
+      staff: true,
+      admin: true,
     },
   });
 }

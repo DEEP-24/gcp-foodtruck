@@ -16,7 +16,7 @@ export function useMatchesData(routeId: string): Record<string, unknown> | undef
     () => matchingRoutes.find((route) => route.id === routeId),
     [matchingRoutes, routeId],
   );
-  return route?.data;
+  return route?.data as Record<string, unknown> | undefined;
 }
 
 export function useOptionalUser() {

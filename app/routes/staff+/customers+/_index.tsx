@@ -1,6 +1,4 @@
 import { XMarkIcon } from "@heroicons/react/24/solid";
-import { Role } from "@prisma/client";
-import { DialogTrigger } from "@radix-ui/react-dialog";
 import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
@@ -143,7 +141,8 @@ export default function ManageCustomers() {
     }
 
     return customers.filter((customer) => {
-      const fullName = `${customer.user.profile?.firstName} ${customer.user.profile?.lastName}`.toLowerCase();
+      const fullName =
+        `${customer.user.profile?.firstName} ${customer.user.profile?.lastName}`.toLowerCase();
       return fullName.includes(search.toLowerCase());
     });
   }, [search, customers]);
@@ -253,7 +252,7 @@ export default function ManageCustomers() {
                         </td>
                         <td className="relative space-x-4 whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6 md:pr-0">
                           <Button size="sm" color="blue" asChild>
-                            <Link to={customer.id}>Start order</Link>
+                            <Link to={`/staff/customers/${customer.id}`}>Start order</Link>
                           </Button>
                         </td>
                       </tr>

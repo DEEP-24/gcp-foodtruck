@@ -46,7 +46,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 
   const customer = await db.customer.findUnique({
     where: {
-      userId: custId,
+      id: custId,
     },
     include: {
       user: {
@@ -90,6 +90,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
 
   const { custId } = params;
+
+  const customer = await db.customer.findUnique({
+    where: { id: custId },
+  });
+
   const intent = formData.get("intent")?.toString();
 
   if (!custId || !intent) {
@@ -121,7 +126,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       const products = JSON.parse(stringifiedProducts) as Array<StaffCartItem>;
 
       await createOrder({
-        customerId: custId,
+        customerId: customer?.userId ?? "",
         items: products,
         amount: Number(amount),
         paymentMethod: paymentMethod as PaymentMethod,

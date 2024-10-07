@@ -36,12 +36,14 @@ import { daysOfWeek, titleCase } from "~/utils/misc";
 import { badRequest } from "~/utils/misc.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const userId = await requireUserId(request, request.url);
+  const userId = await requireUserId(request);
 
   const customer = await db.customer.findUnique({
-    where: { userId: userId },
+    where: { userId },
     include: { Wallet: true },
   });
+
+  console.log("User Id", userId);
 
   return json({ customer });
 };
@@ -54,7 +56,7 @@ type ActionData = Partial<{
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
 
-  const userId = await requireUserId(request, request.url);
+  const userId = await requireUserId(request);
 
   const intent = formData.get("intent")?.toString();
 
@@ -85,6 +87,8 @@ export async function action({ request }: ActionFunctionArgs) {
       }
 
       const products = JSON.parse(stringifiedProducts) as Array<CartItem>;
+
+      console.log("userId", userId);
 
       await createOrder({
         customerId: userId,
@@ -502,7 +506,7 @@ export default function Cart() {
             </div>
 
             <DialogFooter className="mt-14 flex items-center gap-4 justify-between">
-              <DialogClose  asChild>
+              <DialogClose asChild>
                 <Button variant="destructive" onClick={() => closePaymentModal()}>
                   Cancel
                 </Button>

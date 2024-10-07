@@ -1,6 +1,6 @@
 import type { ActionFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import * as React from "react";
 import { z } from "zod";
 import { TailwindContainer } from "~/components/TailwindContainer";
@@ -39,24 +39,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const manager = await db.manager.findUnique({
     where: { userId: user.id },
-    include: { 
-      foodTruck: { 
-        include: { 
-          staff: { 
-            include: { 
-              user: { 
-                include: { 
-                  profile: true 
-                } 
-              } 
-            } 
-          } 
-        } 
-      } 
+    include: {
+      foodTruck: {
+        include: {
+          staff: {
+            include: {
+              user: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  return json({ employees: manager?.foodTruck?.staff ?? [] });
+  return json({ employees: manager?.foodTruck?.staff ?? [], user });
 };
 
 interface ActionData {
@@ -80,7 +80,7 @@ export const action: ActionFunction = async ({ request }) => {
       },
     });
 
-    const user = await tx.user.create({
+    await tx.user.create({
       data: {
         email: fields.email,
         passwordHash: await createPasswordHash(fields.password),
@@ -105,9 +105,7 @@ export default function ManageEmployees() {
     },
   });
 
-  const { employees } = useLoaderData<typeof loader>();
-
-  const { user } = useUser();
+  const { employees, user } = useLoaderData<typeof loader>();
 
   const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -179,7 +177,7 @@ export default function ManageEmployees() {
                           {employee.user.profile?.phoneNo}
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 md:pl-0">
-                          {formatDate(employee.user.profile?.dob ?? '')}
+                          {formatDate(employee.user.profile?.dob ?? "")}
                         </td>
 
                         <td className="relative space-x-4 whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6 md:pr-0" />
@@ -201,7 +199,11 @@ export default function ManageEmployees() {
               disabled={isSubmitting}
               className="flex flex-col gap-4 items-center justify-center"
             >
-              <input hidden name="foodTruckId" defaultValue={(user as any)?.manager?.foodTruckId ?? ""} />
+              <input
+                hidden
+                name="foodTruckId"
+                defaultValue={(user as any)?.manager?.foodTruckId ?? ""}
+              />
               <div className="grid w-full max-w-sm items-center gap-1.5">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input type="text" name="firstName" required />

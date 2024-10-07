@@ -1,4 +1,12 @@
-import { type Invoice, type Order, type OrderType, PaymentMethod, type User, OrderStatus, Customer } from "@prisma/client";
+import {
+  type Customer,
+  type Invoice,
+  type Order,
+  OrderStatus,
+  type OrderType,
+  PaymentMethod,
+  type User,
+} from "@prisma/client";
 import type { CartItem } from "~/context/CartContext";
 import { db } from "~/lib/db.server";
 
@@ -51,7 +59,7 @@ export function createOrder({
 
     // Find the customer associated with the user
     const customer = await tx.customer.findUnique({
-      where: { id: customerId },
+      where: { userId: customerId },
       select: { id: true },
     });
 
