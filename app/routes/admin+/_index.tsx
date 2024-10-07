@@ -372,7 +372,7 @@ export default function ManageFoodTrucks() {
 
               <DialogFooter>
                 <div className="mt-1 flex items-center justify-end gap-4">
-                  <DialogClose>
+                  <DialogClose asChild>
                     <Button disabled={isSubmitting} color="red" variant="destructive">
                       Cancel
                     </Button>
@@ -440,7 +440,7 @@ export default function ManageFoodTrucks() {
 
               <DialogFooter>
                 <div className="mt-1 flex items-center justify-end gap-4">
-                  <DialogClose>
+                  <DialogClose asChild>
                     <Button disabled={isSubmitting} variant="destructive">
                       Cancel
                     </Button>

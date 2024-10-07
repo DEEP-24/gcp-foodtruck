@@ -2,7 +2,6 @@ import { createId } from "@paralleldrive/cuid2";
 import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import ObjectID from "bson-objectid";
 import clsx from "clsx";
 import * as React from "react";
 import { z } from "zod";
@@ -14,6 +13,7 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -72,10 +72,7 @@ export const action: ActionFunction = async ({ request }) => {
 export default function ManageFoodItems() {
   const fetcher = useFetcherCallback<ActionData>({
     onSuccess: () => {
-      console.log("Success");
-      setSelectedCategoryId(null);
-      setSelectedCategory(null);
-      setModalOpen(false);
+      handleCloseModal();
     },
   });
 
@@ -91,6 +88,14 @@ export default function ManageFoodItems() {
   const isSubmitting = fetcher.state !== "idle";
 
   React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.success) {
+      setModalOpen(false);
+      setSelectedCategoryId(null);
+      setSelectedCategory(null);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  React.useEffect(() => {
     if (!selectedCategoryId) {
       setSelectedCategory(null);
       return;
@@ -104,6 +109,12 @@ export default function ManageFoodItems() {
     setSelectedCategory(category);
     setModalOpen(true);
   }, [categories, selectedCategoryId]);
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedCategoryId(null);
+    setSelectedCategory(null);
+  };
 
   return (
     <>
@@ -185,10 +196,12 @@ export default function ManageFoodItems() {
       >
         <DialogContent>
           <DialogHeader>
-            {clsx({
-              "Edit Category": mode === MODE.edit,
-              "Add Category": mode === MODE.add,
-            })}
+            <DialogTitle>
+              {clsx({
+                "Edit Category": mode === MODE.edit,
+                "Add Category": mode === MODE.add,
+              })}
+            </DialogTitle>
           </DialogHeader>
           <fetcher.Form method="post">
             <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
@@ -216,12 +229,17 @@ export default function ManageFoodItems() {
 
               <DialogFooter>
                 <div className="mt-1 flex items-center justify-end gap-4">
-                  <DialogClose>
-                    <Button disabled={isSubmitting} variant="destructive">
+                  <DialogClose asChild>
+                    <Button
+                      disabled={isSubmitting}
+                      variant="destructive"
+                      onClick={handleCloseModal}
+                      type="button"
+                    >
                       Cancel
                     </Button>
                   </DialogClose>
-                  <Button type="submit">
+                  <Button type="submit" disabled={isSubmitting}>
                     {mode === MODE.edit ? "Save changes" : "Add Category"}
                   </Button>
                 </div>

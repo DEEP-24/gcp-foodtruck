@@ -591,7 +591,7 @@ function PaymentButton() {
 
             <DialogFooter>
               <div className="mt-6 flex items-center gap-4 sm:justify-end">
-                <DialogClose>
+                <DialogClose asChild>
                   <Button color="red">Cancel</Button>
                 </DialogClose>
 

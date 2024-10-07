@@ -502,7 +502,7 @@ export default function Cart() {
             </div>
 
             <DialogFooter className="mt-14 flex items-center gap-4 justify-between">
-              <DialogClose>
+              <DialogClose  asChild>
                 <Button variant="destructive" onClick={() => closePaymentModal()}>
                   Cancel
                 </Button>

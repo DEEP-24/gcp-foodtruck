@@ -375,7 +375,7 @@ export default function ManageFoodItems() {
 
               <DialogFooter>
                 <div className="mt-1 flex items-center justify-end gap-4">
-                  <DialogClose>
+                  <DialogClose asChild>
                     <Button disabled={isSubmitting} variant="destructive">
                       Cancel
                     </Button>
