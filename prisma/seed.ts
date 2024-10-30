@@ -6,14 +6,23 @@ import { createPasswordHash } from "~/utils/misc";
 const db = new PrismaClient();
 
 async function seed() {
-  await db.category.deleteMany();
-  await db.item.deleteMany();
-  await db.foodTruck.deleteMany();
-  await db.user.deleteMany();
-  await db.order.deleteMany();
-  await db.itemOrder.deleteMany();
+  // Delete all records from all tables
   await db.itemOrder.deleteMany();
   await db.invoice.deleteMany();
+  await db.order.deleteMany();
+  await db.transaction.deleteMany();
+  await db.wallet.deleteMany();
+  await db.categoryItem.deleteMany();
+  await db.item.deleteMany();
+  await db.foodTruckSchedule.deleteMany();
+  await db.staff.deleteMany();
+  await db.manager.deleteMany();
+  await db.foodTruck.deleteMany();
+  await db.category.deleteMany();
+  await db.admin.deleteMany();
+  await db.customer.deleteMany();
+  await db.user.deleteMany();
+  await db.profile.deleteMany();
 
   // Create a customer
   const customerProfile = await db.profile.create({
@@ -21,7 +30,10 @@ async function seed() {
       firstName: faker.name.firstName(),
       lastName: faker.name.lastName(),
       phoneNo: "123-456-7890",
-      address: faker.address.streetAddress(),
+      street: faker.address.streetAddress(),
+      city: faker.address.city(),
+      state: faker.address.state(),
+      zipCode: faker.address.zipCode(),
     },
   });
 
@@ -34,9 +46,17 @@ async function seed() {
     },
   });
 
+  // Create a wallet for the customer
+  const customerWallet = await db.wallet.create({
+    data: {
+      balance: 1000,
+    },
+  });
+
   await db.customer.create({
     data: {
       userId: customerUser.id,
+      walletId: customerWallet.id,
     },
   });
 
@@ -60,18 +80,6 @@ async function seed() {
   await db.admin.create({
     data: {
       userId: adminUser.id,
-    },
-  });
-
-  // Create a wallet for the customer
-  await db.wallet.create({
-    data: {
-      balance: 1000,
-      Customer: {
-        connect: {
-          userId: customerUser.id,
-        },
-      },
     },
   });
 
@@ -109,7 +117,7 @@ async function seed() {
           {
             name: "Burger",
             image:
-              "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=999&q=80",
+              "https://images.unsplash.com/photo-1568901346375-23c0b8199d4d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=999&q=80",
             price: Number(faker.finance.amount(5, 50, 2)),
             quantity: 1,
             slug: slugify("burger-20", { lower: true, strict: true }),

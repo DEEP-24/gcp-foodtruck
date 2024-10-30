@@ -31,7 +31,10 @@ model Profile {
   lastName  String    @map("last_name")
   dob       DateTime? @map("dob")
   phoneNo   String?   @map("phone_no")
-  address   String?
+  street    String?   @map("street")
+  city      String?   @map("city")
+  state     String?   @map("state")
+  zipCode   String?   @map("zip_code")
 
   user User?
 
@@ -87,28 +90,6 @@ model Staff {
   @@map("staff")
 }
 
-// model User {
-//   id               String     @id @default(cuid()) @map("_id")
-//   firstName        String     @map("first_name")
-//   lastName         String     @map("last_name")
-//   passwordHash     String     @map("password_hash")
-//   email            String     @unique
-//   orders           Order[]
-//   phoneNo          String?    @map("phone_no")
-//   address          String?
-//   role             Role       @default(CUSTOMER)
-//   ssn              String?    @map("ssn")
-//   dob              DateTime?  @map("dob")
-//   categories       Category[]
-//   hasResetPassword Boolean    @default(false) @map("has_reset_password")
-
-//   foodTruck   FoodTruck? @relation(fields: [foodTruckId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-//   foodTruckId String?    @map("food_truck_id")
-//   Wallet      Wallet?
-
-//   @@map("user")
-// }
-
 model Wallet {
   id      String @id @default(cuid()) @map("_id")
   balance Float  @default(0)
@@ -130,30 +111,6 @@ model Transaction {
 
   @@map("transaction")
 }
-
-// model Admin {
-//   id           String @id @default(cuid()) @map("_id")
-//   firstName    String @map("first_name")
-//   lastName     String @map("last_name")
-//   email        String @unique
-//   passwordHash String @map("password_hash")
-
-//   @@map("admin")
-// }
-
-// model Manager {
-//   id           String @id @default(cuid()) @map("_id")
-//   firstName    String @map("first_name")
-//   lastName     String @map("last_name")
-//   email        String @unique
-//   passwordHash String @map("password_hash")
-//   phoneNo      String @map("phone_no")
-
-//   foodTruck   FoodTruck? @relation(fields: [foodTruckId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-//   foodTruckId String?    @unique @map("food_truck_id")
-
-//   @@map("managers")
-// }
 
 model FoodTruck {
   id          String              @id @default(cuid()) @map("_id")
@@ -239,7 +196,7 @@ model Order {
   feedback       String?
   pickupDateTime DateTime?   @map("pickup_date_time")
 
-  customer       Customer? @relation(fields: [customerId], references: [userId])
+  customer   Customer? @relation(fields: [customerId], references: [userId])
   customerId String?
 
   @@map("order")

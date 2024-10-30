@@ -326,7 +326,9 @@ export default function Wallet() {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(PaymentMethod)
-                    .filter((method) => method !== PaymentMethod.CASH)
+                    .filter(
+                      (method) => method !== PaymentMethod.CASH && method !== PaymentMethod.WALLET,
+                    )
                     .map((method) => (
                       <SelectItem key={method} value={method}>
                         {titleCase(method.replace(/_/g, " "))}
